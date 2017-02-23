@@ -1,2 +1,2 @@
 # Django-httpbin
-httpbin in django
+[httpbin](https://github.com/Runscope/httpbin) in django
