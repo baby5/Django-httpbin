@@ -7,3 +7,8 @@ DONE:
 - /headers  
 - /get  
 - /post  
+- /put  
+- /delete  
+- /encoding/utf8  
+- /gzip  
+- /deflate

@@ -23,4 +23,10 @@ urlpatterns = [
     url(r'^headers$', views.headers, name='headers'),
     url(r'^get$', views.get, name='get'),
     url(r'^post$', views.post, name='post'),
+    url(r'^patch$', views.patch, name='patch'),
+    url(r'^put$', views.put, name='put'),
+    url(r'^delete$', views.delete, name='delete'),
+    url(r'^encoding/utf8$', views.utf8, name='utf8'),
+    url(r'^gzip$', views.gzip, name='gzip'),
+    url(r'^deflate$', views.deflate, name='deflate'),
 ]

@@ -1,3 +1,4 @@
+{% load static %}
 <ul>
     <li><a href="{% url 'home' %}"><code>/</code></a> This page.</li>
     <li><a href="{% url 'ip' %}"><code>/ip</code></a> Returns Origin IP.</li>
@@ -5,4 +6,10 @@
     <li><a href="{% url 'headers' %}"><code>/headers</code></a> Returns header dict.</li>
     <li><a href="{% url 'get' %}"><code>/get</code></a> Returns GET data.</li>
     <li><code>/post</code> Returns POST data.</li>
+    <li><code>/patch</code> Returns PATCH data.</li>
+    <li><code>/put</code> Returns PUT data.</li>
+    <li><code>/delete</code> Returns DELETE data.</li>
+    <li><a href="{% url 'utf8' %}"><code>/encoding/utf8</code></a> Returns page containing UTF-8 data.</li>
+    <li><a href="{% url 'gzip' %}"><code>/gzip</code></a> Returns gzip-encoded data.</li>
+    <li><a href="{% url 'deflate' %}"><code>/deflate</code></a> Returns deflate-encoded data.</li>
 </ul>
