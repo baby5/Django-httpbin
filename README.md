@@ -11,4 +11,7 @@ DONE:
 - /delete  
 - /encoding/utf8  
 - /gzip  
-- /deflate
+- /deflate  
+- /status/:code
+- /response-headers
+- /redirect/:n

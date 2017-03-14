@@ -29,4 +29,7 @@ urlpatterns = [
     url(r'^encoding/utf8$', views.utf8, name='utf8'),
     url(r'^gzip$', views.gzip, name='gzip'),
     url(r'^deflate$', views.deflate, name='deflate'),
+    url(r'^status/(?P<code>[0-9\,]+)$', views.status, name='status'),
+    url(r'^response-headers$', views.response_headers, name='response-headers'),
+    url(r'^redirect/(?P<times>[0-9]+)$', views.redirect, name='redirect'),
 ]

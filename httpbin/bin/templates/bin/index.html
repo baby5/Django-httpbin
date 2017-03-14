@@ -12,4 +12,7 @@
     <li><a href="{% url 'utf8' %}"><code>/encoding/utf8</code></a> Returns page containing UTF-8 data.</li>
     <li><a href="{% url 'gzip' %}"><code>/gzip</code></a> Returns gzip-encoded data.</li>
     <li><a href="{% url 'deflate' %}"><code>/deflate</code></a> Returns deflate-encoded data.</li>
+    <li><a href="{% url 'status' code=418 %}"><code>/status/:code</code></a> Returns given HTTP Status code or random if more than one are given</li>
+    <li><a href="{% url 'response-headers' %}?Content-Type=text/plain;%20charset=UTF-8&Server=httpbin"><code>/response-headers</code></a> Returns given response headers</li>
+    <li><a href="{% url 'redirect' times=6 %}"><code>/redirect/:n</code></a> 302 Redirects n times</li>
 </ul>

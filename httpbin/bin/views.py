@@ -1,10 +1,14 @@
 from django.shortcuts import render
-from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
+from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse, HttpResponseRedirect
 from django.core import serializers
+from django.urls import reverse
+from django.template import loader
 from django.views.decorators.gzip import gzip_page 
 
+from urllib import unquote
 import json
 import zlib
+import random
 
 
 JSON_FORMAT = {
@@ -124,3 +128,42 @@ def deflate(request):
     rep['Content-Encoding'] = 'deflate'
     rep['Content-Length'] = len(data)
     return rep
+
+
+def status(request, code):
+    code = random.choice(code.split(','))
+    if code == '418':
+        rep = HttpResponse(status=int(code), reason="I'M A TEAPOT")
+        rep.content = loader.render_to_string('bin/418.html', request=request)
+        del rep['content-type']
+        return rep
+    return HttpResponse(status=int(code))
+
+
+def response_headers(request):
+    rep = HttpResponse(content_type='application/json')
+    headers = {k: v for k, v in rep.items()}
+    headers['Content-Length'] = ''
+    if request.META['QUERY_STRING']:
+        query_string_list = [qs.split('=', 1) for qs in unquote(request.META['QUERY_STRING']).split('&')]
+        for k, v in query_string_list:
+            rep[k] = v
+            if k not in headers:
+                headers[k] = v
+            else:
+                if isinstance(headers[k], list):
+                    headers[k].append(v)
+                else:
+                    headers[k] = [headers[k], v]
+    length = len(json.dumps(headers, **JSON_FORMAT))
+    headers['Content-Length'] = str(length+len(str(length)))
+    rep['Content-Length'] = headers['Content-Length']
+    rep.content = json.dumps(headers, **JSON_FORMAT)
+    return rep
+
+
+def redirect(request, times):
+    if times == '1':
+        return HttpResponseRedirect(reverse('get'))
+    else:
+        return HttpResponseRedirect(reverse('redirect', args=[int(times)-1]))
