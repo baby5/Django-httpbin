@@ -1,15 +1,14 @@
 from django.shortcuts import render
-from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse, HttpResponseRedirect, HttpResponseBadRequest
 from django.core import serializers
 from django.urls import reverse
 from django.template import loader
 from django.views.decorators.gzip import gzip_page 
 
 from urllib import unquote
-import json
-import zlib
-import random
+import json, zlib, random, base64, md5
 
+from .helpers import methods, get_headers, no_get
 
 JSON_FORMAT = {
     'indent': 2,
@@ -17,42 +16,31 @@ JSON_FORMAT = {
 }
 
 
+@methods(['GET', 'HEAD', 'OPTIONS'])
 def home(request):
-    if request.method != 'GET': return HttpResponseNotAllowed(['GET', 'OPTIONS'], 'Method Not Allow')
     return render(request, 'bin/index.html')
 
 
+@methods(['GET', 'HEAD', 'OPTIONS'])
 def ip(request):
-    if request.method != 'GET': return HttpResponseNotAllowed(['GET', 'OPTIONS'], 'Method Not Allow')
     ip = request.META['REMOTE_ADDR']
-    #return HttpResponse(json.dumps({'origin': ip}, indent=2), content_type='application/json')
     return JsonResponse({'origin': ip}, json_dumps_params=JSON_FORMAT)
 
 
+@methods(['GET', 'HEAD', 'OPTIONS'])
 def user_agent(request):
-    if request.method != 'GET': return HttpResponseNotAllowed(['GET', 'OPTIONS'], 'Method Not Allow')
     user_agent= request.META['HTTP_USER_AGENT']
     return JsonResponse({'user-agent': user_agent}, json_dumps_params=JSON_FORMAT)
 
 
-def get_headers(request):
-    headers = {}
-    for key, value in request.META.iteritems():#use iterator
-        if key.startswith('HTTP_'):
-            headers['-'.join(key.split('_')[1:]).title()] = value
-        elif key.startswith('CONTENT'):
-                headers['-'.join(key.split('_')).title()] = value
-    return headers    
-
-
+@methods(['GET', 'HEAD', 'OPTIONS'])
 def headers(request):
-    if request.method != 'GET': return HttpResponseNotAllowed(['GET', 'OPTIONS'], 'Method Not Allow')
     headers = get_headers(request)
     return JsonResponse({'headers': headers}, json_dumps_params=JSON_FORMAT)
 
 
+@methods(['GET', 'HEAD', 'OPTIONS'])
 def get(request):
-    if request.method != 'GET': return HttpResponseNotAllowed(['GET', 'OPTIONS'], 'Method Not Allow')
     rep_dict = {
         'args': request.GET,
         'headers': get_headers(request),
@@ -62,50 +50,34 @@ def get(request):
     return JsonResponse(rep_dict, json_dumps_params=JSON_FORMAT)
 
 
-def no_get(request, method):
-    if request.method != method: return HttpResponseNotAllowed([method, 'OPTIONS'], 'Method Not Allow')
-    rep_dict = {
-        'args': request.GET,
-        'data': request.body,
-        'files': request.FILES,
-        'form': request.POST,
-        'headers': get_headers(request),
-        'json': None,
-        'origin': request.META['REMOTE_ADDR'],
-        'url': request.build_absolute_uri(),
-    }
-    if 'json' in request.content_type:
-        try:
-            rep_dict['json'] = json.loads(request.body)
-        except:
-            pass
-    return JsonResponse(rep_dict, json_dumps_params=JSON_FORMAT)
-
-
+@methods(['POST', 'HEAD', 'OPTIONS'])
 def post(request):
-    return no_get(request, 'POST')
+    return JsonResponse(no_get(request), json_dumps_params=JSON_FORMAT)
 
 
+@methods(['PATCH', 'HEAD', 'OPTIONS'])
 def patch(request):
-    return no_get(request, 'PATCH')
+    return JsonResponse(no_get(request), json_dumps_params=JSON_FORMAT)
 
 
+@methods(['PUT', 'HEAD', 'OPTIONS'])
 def put(request):
-    return no_get(request, 'PUT')
+    return JsonResponse(no_get(request), json_dumps_params=JSON_FORMAT)
 
 
+@methods(['DELETE', 'HEAD', 'OPTIONS'])
 def delete(request):
-    return no_get(request, 'DELETE')
+    return JsonResponse(no_get(request), json_dumps_params=JSON_FORMAT)
 
 
+@methods(['GET', 'HEAD', 'OPTIONS'])
 def utf8(request):
-    if request.method != 'GET': return HttpResponseNotAllowed(['GET', 'OPTIONS'], 'Method Not Allow')
-    return render(request, 'bin/utf8.html')
+    return JsonResponse(no_get(request), json_dumps_params=JSON_FORMAT)
 
 
+@methods(['GET', 'HEAD', 'OPTIONS'])
 @gzip_page
 def gzip(request):
-    if request.method != 'GET': return HttpResponseNotAllowed(['GET', 'HEAD', 'OPTIONS'], 'Method Not Allow')
     rep_dict = {
         'deflated': True,
         'headers': get_headers(request),
@@ -115,8 +87,8 @@ def gzip(request):
     return JsonResponse(rep_dict, json_dumps_params=JSON_FORMAT)
    
 
+@methods(['GET', 'HEAD', 'OPTIONS'])
 def deflate(request):
-    if request.method != 'GET': return HttpResponseNotAllowed(['GET', 'OPTIONS'], 'Method Not Allow')
     rep_dict = {
         'deflated': True,
         'headers': get_headers(request),
@@ -130,6 +102,7 @@ def deflate(request):
     return rep
 
 
+@methods(['GET', 'HEAD', 'OPTIONS'])
 def status(request, code):
     code = random.choice(code.split(','))
     if code == '418':
@@ -140,6 +113,7 @@ def status(request, code):
     return HttpResponse(status=int(code))
 
 
+@methods(['GET', 'HEAD', 'OPTIONS'])
 def response_headers(request):
     rep = HttpResponse(content_type='application/json')
     headers = {k: v for k, v in rep.items()}
@@ -162,8 +136,121 @@ def response_headers(request):
     return rep
 
 
+@methods(['GET', 'HEAD', 'OPTIONS'])
 def redirect(request, times):
     if times == '1':
         return HttpResponseRedirect(reverse('get'))
     else:
         return HttpResponseRedirect(reverse('redirect', args=[int(times)-1]))
+
+
+@methods(['GET', 'HEAD', 'OPTIONS'])
+def redirect_to(request):
+    if 'url' in request.GET:
+        if 'status_code' in request.GET:
+            return HttpResponseRedirect(request.GET['url'], status=int(request.GET['status_code']))
+        else:
+            return HttpResponseRedirect(request.GET['url'])
+    else:
+        return HttpResponseBadRequest()
+
+
+@methods(['GET', 'HEAD', 'OPTIONS'])
+def relative_redirect(request, times):
+    if times == '1':
+        return HttpResponseRedirect(reverse('get'))
+    else:
+        return HttpResponseRedirect(reverse('relative-redirect', args=[int(times)-1]))
+
+
+@methods(['GET', 'HEAD', 'OPTIONS'])
+def absolute_redirect(request, times):
+    if times == '1':
+        return HttpResponseRedirect(request.build_absolute_uri('/get'))
+    else:
+        return HttpResponseRedirect('%s/%d' % (request.build_absolute_uri('/absolute-redirect'), int(times)-1))
+
+
+@methods(['GET', 'HEAD', 'OPTIONS'])
+def cookies(request):
+    return JsonResponse({'cookies': request.COOKIES}, json_dumps_params=JSON_FORMAT)
+
+
+@methods(['GET', 'HEAD', 'OPTIONS'])
+def cookies_set(request):
+    res = HttpResponseRedirect(reverse('cookies'))
+    for key, value in request.GET.items():
+        res.set_cookie(key, value)
+    return res
+
+
+@methods(['GET', 'HEAD', 'OPTIONS'])
+def cookies_delete(request):
+    res = HttpResponseRedirect(reverse('cookies'))
+    for key in request.GET.keys():
+        res.delete_cookie(key)
+    return res
+
+
+@methods(['GET', 'HEAD', 'OPTIONS'])
+def basic_auth(requeset, user, passwd):
+    if 'HTTP_AUTHORIZATION' in requeset.META:
+        auth = requeset.META['HTTP_AUTHORIZATION'].split()
+        if auth[0] == 'Basic':
+            username, password = base64.b64decode(auth[1]).split(':')
+            if username == user and password == passwd:
+                rep_dict = {
+                    'authenticated': True,
+                    'user': user
+                }
+                return JsonResponse(rep_dict, json_dumps_params=JSON_FORMAT)
+    
+    rep = HttpResponse(status=401)
+    rep['WWW-Authenticate'] = "Basic realm='basic auth'"
+    return rep
+
+
+@methods(['GET', 'HEAD', 'OPTIONS'])
+def hidden_basic_auth(requeset, user, passwd):
+    if 'HTTP_AUTHORIZATION' in requeset.META:
+        auth = requeset.META['HTTP_AUTHORIZATION'].split()
+        if auth[0] == 'Basic':
+            username, password = base64.b64decode(auth[1]).split(':')
+            if username == user and password == passwd:
+                rep_dict = {
+                    'authenticated': True,
+                    'user': user
+                }
+                return JsonResponse(rep_dict, json_dumps_params=JSON_FORMAT)
+    else:
+        return HttpResponse(status=404)
+
+
+@methods(['GET', 'HEAD', 'OPTIONS'])
+def digest_auth(request, qop, user, passwd, algorithm):
+    if qop not in ['auth', 'auth-int']:
+        qop = 'auth, auth-int'
+
+    if 'HTTP_AUTHORIZATION' in request.META:
+        auth = request.META['HTTP_AUTHORIZATION'].split(' ', 1)
+        if auth[0] == 'Digest':
+            info_dict = { kv_list[0].strip(): kv_list[1].strip('"') for kv_list in [kv_str.split('=') for kv_str in auth[1].split(',')]}
+            if info_dict['username'] == user:
+                ha1 = md5.new('{user}:{realm}:{passwd}'.format(
+                    user=user, realm=info_dict['realm'], passwd=passwd)).hexdigest()
+                ha2 = md5.new('{method}:{uri}'.format(
+                    method=request.method, uri=info_dict['uri'])).hexdigest()
+                response = md5.new('{ha1}:{nonce}:{nc}:{cnonce}:{qop}:{ha2}'.format(
+                    ha1=ha1, nonce=info_dict['nonce'], nc=info_dict['nc'],
+                    cnonce=info_dict['cnonce'], qop=info_dict['qop'], ha2=ha2)).hexdigest()
+                if response == info_dict['response']:
+                    rep_dict = {
+                        'authenticated': True,
+                        'user': user
+                    }
+                    return JsonResponse(rep_dict, json_dumps_params=JSON_FORMAT)
+                    
+    rep = HttpResponse(status=401)
+    rep['WWW-Authenticate'] = 'Digest realm="%s", qop="%s", nonce="%s", opaque="%s", algorithm=%s' % (
+        'digest', qop, '5', '5', algorithm)
+    return rep

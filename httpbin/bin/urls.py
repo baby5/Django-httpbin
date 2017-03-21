@@ -32,4 +32,13 @@ urlpatterns = [
     url(r'^status/(?P<code>[0-9\,]+)$', views.status, name='status'),
     url(r'^response-headers$', views.response_headers, name='response-headers'),
     url(r'^redirect/(?P<times>[0-9]+)$', views.redirect, name='redirect'),
+    url(r'^redirect-to$', views.redirect_to, name='redirect-to'),
+    url(r'^relative-redirect/(?P<times>[0-9]+)$', views.relative_redirect, name='relative-redirect'),
+    url(r'^absolute-redirect/(?P<times>[0-9]+)$', views.absolute_redirect, name='absolute-redirect'),
+    url(r'cookies$', views.cookies, name='cookies'),
+    url(r'cookies/set$', views.cookies_set, name='cookies-set'),
+    url(r'cookies/delete$', views.cookies_delete, name='cookies-delete'),
+    url(r'basic-auth/(?P<user>.*)/(?P<passwd>.*)$', views.basic_auth, name='basic-auth'),
+    url(r'hidden-basic-auth/(?P<user>.*)/(?P<passwd>.*)$', views.hidden_basic_auth, name='hidden-basic-auth'),
+    url(r'digest-auth/(?P<qop>.*)/(?P<user>.*)/(?P<passwd>.*)/(?P<algorithm>.*)$', views.digest_auth, name='digest-auth'),
 ]
