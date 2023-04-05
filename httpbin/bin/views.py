@@ -5,8 +5,9 @@ from django.urls import reverse
 from django.template import loader
 from django.views.decorators.gzip import gzip_page 
 
-from urllib import unquote
-import json, zlib, random, base64, md5
+from urllib.parse import unquote
+import hashlib
+import json, zlib, random, base64
 
 from .helpers import methods, get_headers, no_get
 
@@ -95,7 +96,7 @@ def deflate(request):
         'method': request.method,
         'origin': request.META['REMOTE_ADDR'],
     }
-    data = zlib.compress(json.dumps(rep_dict, **JSON_FORMAT))[2:-4]#2-byte zlib header and 4-byte checksum
+    data = zlib.compress(json.dumps(rep_dict, **JSON_FORMAT).encode('utf-8'))[2:-4]#2-byte zlib header and 4-byte checksum
     rep = HttpResponse(data, content_type='application/json')
     rep['Content-Encoding'] = 'deflate'
     rep['Content-Length'] = len(data)
@@ -197,7 +198,8 @@ def basic_auth(requeset, user, passwd):
     if 'HTTP_AUTHORIZATION' in requeset.META:
         auth = requeset.META['HTTP_AUTHORIZATION'].split()
         if auth[0] == 'Basic':
-            username, password = base64.b64decode(auth[1]).split(':')
+            auth_str = base64.b64decode(auth[1]).decode('utf-8')
+            username, password = auth_str.split(':', 1)
             if username == user and password == passwd:
                 rep_dict = {
                     'authenticated': True,
@@ -211,11 +213,12 @@ def basic_auth(requeset, user, passwd):
 
 
 @methods(['GET', 'HEAD', 'OPTIONS'])
-def hidden_basic_auth(requeset, user, passwd):
-    if 'HTTP_AUTHORIZATION' in requeset.META:
+def hidden_basic_auth(request, user, passwd):
+    if 'HTTP_AUTHORIZATION' in request.META:
         auth = requeset.META['HTTP_AUTHORIZATION'].split()
         if auth[0] == 'Basic':
-            username, password = base64.b64decode(auth[1]).split(':')
+            auth_str = base64.b64decode(auth[1]).decode('utf-8')
+            username, password = base64.b64decode(auth_str).split(':', 1)
             if username == user and password == passwd:
                 rep_dict = {
                     'authenticated': True,
@@ -225,6 +228,11 @@ def hidden_basic_auth(requeset, user, passwd):
     else:
         return HttpResponse(status=404)
 
+
+def md5(content):
+    md = hashlib.new('md5')
+    md.update(content.encode('utf-8'))
+    return md.hexdigest()
 
 @methods(['GET', 'HEAD', 'OPTIONS'])
 def digest_auth(request, qop, user, passwd, algorithm):
@@ -236,13 +244,11 @@ def digest_auth(request, qop, user, passwd, algorithm):
         if auth[0] == 'Digest':
             info_dict = { kv_list[0].strip(): kv_list[1].strip('"') for kv_list in [kv_str.split('=') for kv_str in auth[1].split(',')]}
             if info_dict['username'] == user:
-                ha1 = md5.new('{user}:{realm}:{passwd}'.format(
-                    user=user, realm=info_dict['realm'], passwd=passwd)).hexdigest()
-                ha2 = md5.new('{method}:{uri}'.format(
-                    method=request.method, uri=info_dict['uri'])).hexdigest()
-                response = md5.new('{ha1}:{nonce}:{nc}:{cnonce}:{qop}:{ha2}'.format(
+                ha1 = md5('{user}:{realm}:{passwd}'.format(user=user, realm=info_dict['realm'], passwd=passwd))
+                ha2 = md5('{method}:{uri}'.format(method=request.method, uri=info_dict['uri']))
+                response = md5('{ha1}:{nonce}:{nc}:{cnonce}:{qop}:{ha2}'.format(
                     ha1=ha1, nonce=info_dict['nonce'], nc=info_dict['nc'],
-                    cnonce=info_dict['cnonce'], qop=info_dict['qop'], ha2=ha2)).hexdigest()
+                    cnonce=info_dict['cnonce'], qop=info_dict['qop'], ha2=ha2))
                 if response == info_dict['response']:
                     rep_dict = {
                         'authenticated': True,
