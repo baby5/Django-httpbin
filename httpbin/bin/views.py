@@ -1,11 +1,12 @@
 from django.shortcuts import render
-from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse, HttpResponseRedirect, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse, HttpResponseRedirect, HttpResponseBadRequest, StreamingHttpResponse
 from django.core import serializers
 from django.urls import reverse
 from django.template import loader
 from django.views.decorators.gzip import gzip_page 
 
 from urllib.parse import unquote
+import itertools
 import hashlib
 import json, zlib, random, base64
 
@@ -260,3 +261,13 @@ def digest_auth(request, qop, user, passwd, algorithm):
     rep['WWW-Authenticate'] = 'Digest realm="%s", qop="%s", nonce="%s", opaque="%s", algorithm=%s' % (
         'digest', qop, '5', '5', algorithm)
     return rep
+
+
+@methods(['GET', 'HEAD', 'OPTIONS'])
+def download(request):
+    size = int(request.GET.get('filesize', 1024))
+    response = StreamingHttpResponse((b' ' for _ in range(size)))
+    response.headers['Content-Length'] = size
+    response.headers['Content-Disposition'] = 'attachment; filename="file-%s.dat"' % size
+    response.headers['Content-Type'] = 'application/octet-stream'
+    return response

@@ -25,4 +25,5 @@
     <li><a href="{% url 'basic-auth' user='user' passwd='passwd'%}"><code>/basic-auth/:user/:passwd</code></a> Challenges HTTPBasic Auth.</li>
     <li><a href="{% url 'hidden-basic-auth' user='user' passwd='passwd'%}"><code>/hidden-basic-auth/:user/:passwd</code></a> 404'd BasicAuth.</li>
     <li><a href="{% url 'digest-auth' qop='auth' user='user' passwd='passwd' algorithm='MD5' %}"><code>/digest-auth/:qop/:user/:passwd/:algorithm</code></a> Challenges HTTPDigest Auth.</li>
+    <li><a href="{% url 'download' %}?filesize=1024"><code>/download?filesize=1024</code></a> Download a file.</li>
 </ul>
