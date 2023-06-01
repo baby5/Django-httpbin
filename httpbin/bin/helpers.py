@@ -2,12 +2,11 @@ from functools import wraps
 import json
 
 from django.http import JsonResponse, HttpResponseNotAllowed
-from django.utils.decorators import available_attrs
 
 
 def methods(method_list):
     def decorator(func):
-        @wraps(func, assigned=available_attrs(func))
+        @wraps(func)
         def inner(request, *args, **kw):
             if request.method not in method_list:
                 return HttpResponseNotAllowed(method_list, 'Method Not Allow')
@@ -19,7 +18,7 @@ def methods(method_list):
 
 def get_headers(request):
     headers = {}
-    for key, value in request.META.iteritems():#use iterator
+    for key, value in request.META.items():
         if key.startswith('HTTP_'):
             headers['-'.join(key.split('_')[1:]).title()] = value
         elif key.startswith('CONTENT'):
@@ -30,7 +29,7 @@ def get_headers(request):
 def no_get(request):
     rep_dict = {
         'args': request.GET,
-        'data': request.body,
+        'data': request.body.decode('utf-8'),
         'files': request.FILES,
         'form': request.POST,
         'headers': get_headers(request),
